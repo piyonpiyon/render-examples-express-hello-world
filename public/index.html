@@ -88,14 +88,14 @@
           }
           if (text.startsWith('/secret ')) {
           const secretText = text.replace('/secret ', '') // コマンドの文字を消す
-          ws.send(JSON.stringify({ id: 'secret-id', name: '🕵️ 匿名ユーザー', text: secretText }))
+          ws.send(JSON.stringify({ id: 'secret-id', name: '匿名ユーザー', text: secretText }))
           input.value = ''
           return
           }
           if (text.startsWith('/bot')) {
-          const replies = ['いいね！', 'なるほどね🤔', 'すごーい！', 'ファイト！']
+          const replies = ['いいね！', 'なるほどね', 'すごーい！', 'ファイト！']
           const randomReply = replies[Math.floor(Math.random() * replies.length)]
-          text = `🤖 ボット: ${randomReply}`
+          text = `botch: ${randomReply}`
           }
 
           ws.send(JSON.stringify({ id: myId, name: myName, text }));
