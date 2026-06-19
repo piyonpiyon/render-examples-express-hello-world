@@ -1,10 +1,23 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Chat App</title>
     <style>
+      .profile-area {
+        display: flex;
+        padding: 10px;
+        background: #f5f5f5;
+        border-bottom: 1px solid #ccc;
+        align-items: center;
+        gap: 10px;
+      }
+      .name-input {
+        padding: 5px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
       .chat {
         display: flex;
         flex-direction: column;
@@ -35,6 +48,17 @@
   </head>
   <body>
     <div class="chat">
+      <div class="profile-area">
+        <label for="nickname">ニックネーム:</label>
+        <input
+          type="text"
+          id="nickname"
+          class="name-input"
+          value="名無しさん"
+          placeholder="名前を入力してね"
+        />
+      </div>
+
       <ul class="messages"></ul>
       <form class="form">
         <input class="input" autocomplete="off" />
@@ -44,34 +68,49 @@
 
     <script>
       function main() {
-        const host = location.origin.replace(/^http/, 'ws')
-        const ws = new WebSocket(host + '/ws')
+        const host = location.origin.replace(/^http/, "ws");
+        const ws = new WebSocket(host + "/ws");
+        const myId = self.crypto.randomUUID().substr(0, 8);
 
-        const form = document.querySelector('.form')
+        const form = document.querySelector(".form");
+        const nicknameInput = document.querySelector("#nickname");
 
         form.onsubmit = function (e) {
-          e.preventDefault()
-          const input = document.querySelector('.input')
-          const text = input.value
-          ws.send(text)
-          input.value = ''
-          input.focus()
-        }
+          e.preventDefault();
+          const input = document.querySelector(".input");
+          let text = input.value.trim();
+          const myName = nicknameInput.value.trim() || "名無しさん";
+
+          if (text === "/dice") {
+            const diceNumber = Math.floor(Math.random() * 6) + 1; // 1〜6のランダムな数字
+            text = `🎲 サイコロを振って [ ${diceNumber} ] が出ました！`;
+          }
+
+          ws.send(JSON.stringify({ id: myId, name: myName, text }));
+          input.value = "";
+          input.focus();
+        };
 
         ws.onmessage = function (msg) {
-          const response = msg.data
-          const messageList = document.querySelector('.messages')
-          const li = document.createElement('li')
-          li.textContent = response
-          messageList.appendChild(li)
-        }
+          const response = msg.data;
+          const { id, name, text } = JSON.parse(msg.data);
+          const messageList = document.querySelector(".messages");
+          const li = document.createElement("li");
+          // li.textContent = response
+          if (id === myId) {
+            li.textContent = `(${id})${name}:` + text;
+          } else {
+            li.textContent = `${name}(${id}): ` + text;
+          }
+          messageList.appendChild(li);
+        };
 
         ws.onerror = function (error) {
-          console.error('WebSocket Error: ', error)
-        }
+          console.error("WebSocket Error: ", error);
+        };
       }
 
-      main()
+      main();
     </script>
   </body>
 </html>
