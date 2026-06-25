@@ -1,4 +1,4 @@
-<!doctype html>
+  <!doctype html>
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
@@ -225,6 +225,17 @@
           if (text === "/dice") {
             const diceNumber = Math.floor(Math.random() * 6) + 1;
             text = `🎲 サイコロを振って [ ${diceNumber} ] が出ました！`;
+          }
+          if (text.startsWith('/secret ')) {
+          const secretText = text.replace('/secret ', '') // コマンドの文字を消す
+          ws.send(JSON.stringify({ id: 'secret-id', name: '匿名ユーザー', text: secretText }))
+          input.value = ''
+          return
+          }
+          if (text.startsWith('/bot')) {
+          const replies = ['いいね！', 'なるほどね', 'すごーい！', 'ファイト！']
+          const randomReply = replies[Math.floor(Math.random() * replies.length)]
+          text = `botch: ${randomReply}`
           }
 
           if (text === "/fireworks") {
