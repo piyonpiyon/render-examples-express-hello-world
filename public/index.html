@@ -1,53 +1,144 @@
 <!doctype html>
 <html lang="ja">
   <head>
-    
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Chat App</title>
     <style>
+      :root {
+        --bg-color: #ffffff;
+        --text-color: #333333;
+        --area-bg: #f5f5f5;
+        --border-color: #ccc;
+        --input-bg: #ffffff;
+        --btn-bg: #eee;
+      }
+
+      body {
+        margin: 0;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        font-family: sans-serif;
+        transition: all 0.3s ease;
+        overflow: hidden;
+      }
+
       .profile-area {
         display: flex;
         padding: 10px;
-        background: #f5f5f5;
-        border-bottom: 1px solid #ccc;
+        background: var(--area-bg);
+        border-bottom: 1px solid var(--border-color);
         align-items: center;
         gap: 10px;
       }
+      
       .name-input {
         padding: 5px;
-        border: 1px solid #ccc;
+        border: 1px solid var(--border-color);
         border-radius: 4px;
+        background: var(--input-bg);
+        color: var(--text-color);
       }
+      
       .chat {
         display: flex;
         flex-direction: column;
         height: 100vh;
       }
+      
       .messages {
         flex: 1;
         overflow-y: auto;
         list-style: none;
-        padding: 0;
+        padding: 20px;
         margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
       }
+      
+      .messages li {
+        color: var(--text-color) !important;
+        word-break: break-all;
+        font-size: 16px;
+      }
+
       .form {
         display: flex;
       }
+      
       .input {
         flex: 1;
         padding: 10px;
-        border: 1px solid #ccc;
+        border: 1px solid var(--border-color);
+        background: var(--input-bg);
+        color: var(--text-color);
       }
+      
       .submit {
         padding: 10px;
-        border: 1px solid #ccc;
-        background: #eee;
+        border: 1px solid var(--border-color);
+        background: var(--btn-bg);
+        color: var(--text-color);
         cursor: pointer;
+      }
+      
+      /* 花火エフェクトのCSS */
+      .firework-canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        pointer-events: none;
+        z-index: 1;
+      }
+
+      .firework {
+        position: absolute;
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        animation: explode 1s ease-out forwards;
+      }
+
+      @keyframes explode {
+        0% {
+          transform: translate(0, 0) scale(1);
+          opacity: 1;
+          box-shadow:
+            0 0 #ff0055,
+            0 0 #00ffcc,
+            0 0 #ffff00,
+            0 0 #ff9900,
+            0 0 #0099ff,
+            0 0 #ff00ff,
+            0 0 #99ff00,
+            0 0 #ffffff;
+        }
+        100% {
+          opacity: 0;
+          box-shadow:
+            -60px -60px #ff0055,
+            60px -60px #00ffcc,
+            -80px 40px #ffff00,
+            80px 40px #ff9900,
+            -20px 80px #0099ff,
+            20px -80px #ff00ff,
+            70px 80px #99ff00,
+            -70px -80px #ffffff,
+            0px -100px #ff0055,
+            100px 0px #00ffcc,
+            0px 100px #ffff00,
+            -100px 0px #ff9900;
+          transform: translate(0, 30px) scale(1.5);
+        }
       }
     </style>
   </head>
   <body>
+    <div id="fireworkCanvas" class="firework-canvas"></div>
+
     <div class="chat">
       <div class="profile-area">
         <label for="nickname">ニックネーム:</label>
@@ -61,56 +152,94 @@
       </div>
 
       <ul class="messages"></ul>
+
       <form class="form">
-        <input class="input" autocomplete="off" />
+        <input class="input" autocomplete="off" placeholder="メッセージを入力..." />
         <button class="submit">Send</button>
       </form>
     </div>
 
     <script>
+      function launchFireworks() {
+        const canvas = document.getElementById("fireworkCanvas");
+        if (!canvas) return;
+        for (let i = 0; i < 3; i++) {
+          setTimeout(() => {
+            const fw = document.createElement("div");
+            fw.className = "firework";
+            fw.style.left = Math.random() * 80 + 10 + "vw";
+            fw.style.top = Math.random() * 50 + 10 + "vh";
+            canvas.appendChild(fw);
+
+            setTimeout(() => fw.remove(), 1000);
+          }, i * 300);
+        }
+      }
+
       function main() {
-        const host = location.origin.replace(/^http/, "ws");
-        const ws = new WebSocket(host + "/ws");
+        // 画面単体（file:///）で動くようにIDを生成
         const myId = self.crypto.randomUUID().substr(0, 8);
 
         const form = document.querySelector(".form");
         const nicknameInput = document.querySelector("#nickname");
+        const messageList = document.querySelector(".messages");
+
+        // メッセージを表示する関数
+        function displayMessage(id, name, text) {
+          const li = document.createElement("li");
+          const displayName = name || id;
+
+          if (id === myId) {
+            li.textContent = `自分(${displayName}): ` + text;
+          } else {
+            li.textContent = displayName + ": " + text;
+          }
+          messageList.appendChild(li);
+
+          if (text.includes("綺麗な花火を打ち上げました！")) {
+            launchFireworks();
+          }
+
+          messageList.scrollTop = messageList.scrollHeight;
+        }
 
         form.onsubmit = function (e) {
           e.preventDefault();
           const input = document.querySelector(".input");
           let text = input.value.trim();
+          if (!text) return;
           const myName = nicknameInput.value.trim() || "名無しさん";
 
+          // コマンドの判定
+          if (text === "/help") {
+            const li = document.createElement("li");
+            li.style.color = "var(--text-color)";
+            li.innerHTML =
+              "🤖 使えるコマンド:<br>・/fireworks (花火を打ち上げる)<br>・/dice (サイコロを振る)";
+            messageList.appendChild(li);
+            input.value = "";
+            messageList.scrollTop = messageList.scrollHeight;
+            return;
+          }
+
           if (text === "/dice") {
-            const diceNumber = Math.floor(Math.random() * 6) + 1; // 1〜6のランダムな数字
+            const diceNumber = Math.floor(Math.random() * 6) + 1;
             text = `🎲 サイコロを振って [ ${diceNumber} ] が出ました！`;
           }
 
-          ws.send(JSON.stringify({ id: myId, name: myName, text }));
+          if (text === "/fireworks") {
+            text = "🎆 綺麗な花火を打ち上げました！";
+          }
+
+          // サーバーを介さず、直接画面に出力する
+          displayMessage(myId, myName, text);
+
           input.value = "";
           input.focus();
         };
-
-        ws.onmessage = function (msg) {
-          const response = msg.data;
-          const { id, name, text } = JSON.parse(msg.data);
-          const messageList = document.querySelector(".messages");
-          const li = document.createElement("li");
-          // li.textContent = response
-          if (id === myId) {
-            li.textContent = `(${id})${name}:` + text;
-          } else {
-            li.textContent = `${name}(${id}): ` + text;
-          }
-          messageList.appendChild(li);
-        };
-
-        ws.onerror = function (error) {
-          console.error("WebSocket Error: ", error);
-        };
       }
 
+      // アプリケーションの起動
       main();
     </script>
   </body>
